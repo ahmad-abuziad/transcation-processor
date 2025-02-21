@@ -25,7 +25,7 @@ image build
  docker build --tag transaction-processor-rest .
 
 container run
- docker run -it --detach --network net --name rest-server --publish 80:8080 --env DSN="dbuser:pass@(db:3306)/transaction_processor_db?parseTime=true" transaction-processor-rest
+ docker run -it --detach --network net --name rest-server --publish 80:8080 --env DSN="root:pass@(db:3306)/transaction_processor_db?parseTime=true" transaction-processor-rest
 
  ctrl+c or cmd+c
 

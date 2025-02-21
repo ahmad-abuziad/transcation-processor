@@ -29,14 +29,14 @@ func main() {
 	app.serve()
 }
 
-func (app *application) serve() *gin.Engine {
+func (app *application) serve() {
 	r := gin.Default()
 	r.GET("/health", health)
 	r.POST("/tenant/:tenantID/branch/:branchID/sales-transaction", newSalesTransaction)
 	r.GET("/tenant/:tenantID/sales", getSalesPerProduct)
 	r.GET("/sales", getTopSellingProducts)
 
-	return r
+	r.Run()
 }
 
 func openDB(dsn string) (*sql.DB, error) {
