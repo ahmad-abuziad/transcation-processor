@@ -1,0 +1,39 @@
+services:
+  rest-server:
+    depends_on:
+      - db-server
+    build:
+      context: .
+    container_name: rest-server
+    hostname: rest-server
+    networks:
+      - net
+    ports:
+      - 80:8080
+    environment:
+      - DSN=${DSN:?data source name is not set}
+    deploy:
+      restart_policy:
+        condition: on-failure
+  db-server:
+    image: mysql:8
+    container_name: db-server
+    hostname: db-server
+    networks:
+      - net
+    ports:
+      - 3306:3306
+      - 8080:8080
+    volumes:
+      - db-vol:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+
+volumes:
+  db-vol:
+
+networks:
+  net:
+    driver: bridge
