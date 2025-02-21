@@ -25,6 +25,14 @@ spec:
               "-c",
               'until nc -zv db 3306; do echo "waiting for db"; sleep 2; done;',
             ]
+        - name: migrate-db
+          image: migrate/migrate
+          command:
+            [
+              "sh",
+              "-c",
+              "migrate -path=/migrations -database=\"root:supersecurepassword@(db:3306)/transaction_processor_db?parseTime=true\" up"
+            ]
       containers:
         - env:
             - name: DSN
