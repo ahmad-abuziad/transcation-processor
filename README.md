@@ -9,7 +9,7 @@ network create
  docker network create -d bridge net
  
 container run
- docker run --detach --name db-server --hostname db --network net -p 3306:3306 -p 8080:8080 -e MYSQL_ROOT_PASSWORD=password -v db-vol:/var/lib/mysql mysql:8
+ docker run --detach --name db-server --hostname db --network net -p 3306:3306 -p 8080:8080 -e MYSQL_ROOT_PASSWORD=pass -v db-vol:/var/lib/mysql mysql:8
 
 container enter
  docker exec -it db-server mysql -u root -p

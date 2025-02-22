@@ -5,7 +5,7 @@ CREATE TABLE sales_transactions (
     product_id INTEGER NOT NULL,
     quantity_sold INTEGER NOT NULL,
     price_per_unit DECIMAL(10,2) NOT NULL,
-    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    log_timestamp TIMESTAMP NOT NULL,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE

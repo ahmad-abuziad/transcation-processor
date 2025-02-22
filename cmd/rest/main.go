@@ -4,17 +4,20 @@ import (
 	"database/sql"
 	"log/slog"
 	"os"
+	"sync"
 
-	"github.com/gin-gonic/gin"
+	"github.com/ahmad-abuziad/transaction-processor/internal/data"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
+	logger *slog.Logger
+	models data.Models
+	errors httpErrors
+	wg     sync.WaitGroup
 }
 
 func main() {
-
-	app := application{}
 
 	// use Zap or Logrus
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -26,17 +29,17 @@ func main() {
 	}
 	defer db.Close()
 
-	app.serve()
-}
+	app := &application{
+		logger: logger,
+		models: data.NewModels(db),
+		errors: newHTTPErrors(logger),
+	}
 
-func (app *application) serve() {
-	r := gin.Default()
-	r.GET("/health", health)
-	r.POST("/tenant/:tenantID/branch/:branchID/sales-transaction", newSalesTransaction)
-	r.GET("/tenant/:tenantID/sales", getSalesPerProduct)
-	r.GET("/sales", getTopSellingProducts)
-
-	r.Run()
+	err = app.serve()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 }
 
 func openDB(dsn string) (*sql.DB, error) {
