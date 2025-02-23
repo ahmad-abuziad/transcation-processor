@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/ahmad-abuziad/transaction-processor/internal/data"
+	"github.com/ahmad-abuziad/transaction-processor/internal/metrics"
 	"github.com/redis/go-redis/v9"
 )
 
 type SalesCache struct {
-	Client *redis.Client
+	Client  *redis.Client
+	Metrics metrics.Metrics
 }
 
 func (c *SalesCache) SetSalesPerProduct(tenantID int64, salesPerProduct []data.SalesPerProduct) error {
@@ -29,8 +31,10 @@ func (c *SalesCache) GetSalesPerProduct(tenantID int64) ([]data.SalesPerProduct,
 
 	cachedValue, err := c.Client.Get(context.Background(), cacheKey).Result()
 	if err != nil {
+		c.Metrics.CacheMisses.Inc()
 		return nil, err
 	}
+	c.Metrics.CacheHits.Inc()
 
 	var salesPerProduct []data.SalesPerProduct
 	err = json.Unmarshal([]byte(cachedValue), &salesPerProduct)
@@ -58,8 +62,10 @@ func (c *SalesCache) SetTopSellingProducts(topSellingProducts []data.TopSellingP
 func (c *SalesCache) GetTopSellingProducts() ([]data.TopSellingProduct, error) {
 	cachedValue, err := c.Client.Get(context.Background(), TopSellingProductsKey).Result()
 	if err != nil {
+		c.Metrics.CacheMisses.Inc()
 		return nil, err
 	}
+	c.Metrics.CacheHits.Inc()
 
 	var topSellingProducts []data.TopSellingProduct
 	err = json.Unmarshal([]byte(cachedValue), &topSellingProducts)

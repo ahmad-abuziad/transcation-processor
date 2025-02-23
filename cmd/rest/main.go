@@ -3,29 +3,32 @@ package main
 import (
 	"context"
 	"database/sql"
-	"log/slog"
 	"os"
 	"sync"
 
 	"github.com/ahmad-abuziad/transaction-processor/internal/cache"
 	"github.com/ahmad-abuziad/transaction-processor/internal/data"
+	"github.com/ahmad-abuziad/transaction-processor/internal/metrics"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type application struct {
-	logger *slog.Logger
-	models data.Models
-	errors httpErrors
-	wg     sync.WaitGroup
-	cache  cache.Cache
+	logger  *zap.Logger
+	models  data.Models
+	errors  httpErrors
+	wg      sync.WaitGroup
+	cache   cache.Cache
+	metrics metrics.Metrics
 }
 
 func main() {
+	// zap logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 
-	// TODO use Zap or Logrus
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
+	// mysql db
 	db, err := openDB(os.Getenv("DSN"))
 	if err != nil {
 		logger.Error(err.Error())
@@ -33,18 +36,25 @@ func main() {
 	}
 	defer db.Close()
 
+	// redis client
 	redisClient, err := newRedisClient(os.Getenv("REDIS_ADDR"))
 	if err != nil {
-		logger.Error("unable to connect to cache, app will run without caching", "error", err.Error())
+		logger.Error("unable to connect to cache, app will run without caching", zap.String("error", err.Error()))
 	}
 
+	// metrics
+	m := metrics.NewMetrics()
+
+	// app
 	app := &application{
-		logger: logger,
-		models: data.NewModels(db),
-		errors: newHTTPErrors(logger),
-		cache:  cache.NewCache(redisClient),
+		logger:  logger,
+		models:  data.NewModels(db),
+		errors:  newHTTPErrors(logger),
+		cache:   cache.NewCache(redisClient, m),
+		metrics: m,
 	}
 
+	// serve
 	err = app.serve()
 	if err != nil {
 		logger.Error(err.Error())

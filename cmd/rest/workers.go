@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ahmad-abuziad/transaction-processor/internal/data"
+	"go.uber.org/zap"
 )
 
 const (
@@ -28,29 +29,50 @@ func (app *application) aggregateTransactions() {
 		case txn, ok := <-txnsChan:
 			if !ok {
 				if len(batch) > 0 {
-					app.logger.Info("batching due to closing channel", "batch_size", len(batch))
-					app.models.SalesTransactions.InsertBatch(batch)
+					app.logger.Info("batching due to closing channel", zap.Int("batch_size", len(batch)))
+					app.batchInsertWithRetry(batch)
 				}
 				return
 			}
 
 			batch = append(batch, txn)
 			if len(batch) >= BatchSize {
-				app.logger.Info("batching due to batch size limit", "batch_size", len(batch))
-				app.models.SalesTransactions.InsertBatch(batch)
+				app.logger.Info("batching due to batch size limit", zap.Int("batch_size", len(batch)))
+				app.batchInsertWithRetry(batch)
 				refreshChan <- len(batch)
 				batch = []data.SalesTransaction{}
 			}
 
 		case <-ticker.C:
 			if len(batch) > 0 {
-				app.logger.Info("batching due to time limit", "batch_size", len(batch))
-				app.models.SalesTransactions.InsertBatch(batch)
+				app.logger.Info("batching due to time limit", zap.Int("batch_size", len(batch)))
+				app.batchInsertWithRetry(batch)
 				refreshChan <- len(batch)
 				batch = []data.SalesTransaction{}
 			}
 		}
 	}
+}
+
+func (app *application) batchInsertWithRetry(txns []data.SalesTransaction) {
+	// uncomment if you want to simulate retries
+	// if rand.Intn(100) == 1 {
+	// 	txns[len(txns)-1].QuantitySold = -1 // will fail due database constraint
+	// }
+
+	retries := 3
+	delay := 10 * time.Second
+	var err error
+	for i := 0; i < retries; i++ {
+		err = app.models.SalesTransactions.InsertBatch(txns)
+		if err == nil {
+			return // Success
+		}
+		app.logger.Error("retrying...", zap.Int("attempt", i+1), zap.String("error", err.Error()), zap.Duration("delay", delay))
+		time.Sleep(delay)
+	}
+
+	app.logger.Error("insert batch failed after retries", zap.Any("transactions", txns))
 }
 
 func (app *application) startWorkers() {
@@ -72,6 +94,7 @@ func (app *application) startAggregateTransactionsWorkers() {
 
 const (
 	RefreshEveryXTransaction = 1000
+	TxnsProcessedTime        = 1 * time.Second
 )
 
 func (app *application) startRefreshTopSellingWorker() {
@@ -96,12 +119,12 @@ func (app *application) startRefreshTopSellingWorker() {
 func (app *application) refreshTopSellingProducts() {
 	topSellingProducts, err := app.models.SalesTransactions.GetTopSellingProducts(10)
 	if err != nil {
-		app.logger.Error("Failed to read top selling products cache", "error", err)
+		app.logger.Error("Failed to read top selling products cache", zap.String("error", err.Error()))
 	}
 
 	err = app.cache.SalesCache.SetTopSellingProducts(topSellingProducts)
 	if err != nil {
-		app.logger.Error("Failed to set top selling products cache", "error", err)
+		app.logger.Error("Failed to set top selling products cache", zap.String("error", err.Error()))
 	}
 }
 

@@ -38,3 +38,33 @@ container run
 
 test - 1gb
 docker build -f Dockerfile -t transaction-processor-test --progress plain --no-cache --target run-test-stage .
+
+
+
+find todos
+encapsulate workers
+
+sales limit 10?
+encapsulate logger
+encapsulate handlers
+flags to read DSN & REDIS ADDR
+flags to read configs
+using root
+
+Q&A
+is it safe to commit the .env file?
+no, this is to make the running steps easier. in production you shouldn't commit .env files.
+
+- retry
+- document
+- run
+
+next
+- kafka
+- grpc
+- tests
+- rate limit
+- authentication
+- authorization
+- physical isolation
+- logical isolation

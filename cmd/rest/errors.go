@@ -1,17 +1,17 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type httpErrors struct {
-	logger *slog.Logger
+	logger *zap.Logger
 }
 
-func newHTTPErrors(logger *slog.Logger) httpErrors {
+func newHTTPErrors(logger *zap.Logger) httpErrors {
 	return httpErrors{
 		logger: logger,
 	}
@@ -44,5 +44,5 @@ func (h httpErrors) logError(c *gin.Context, err error) {
 		uri    = c.Request.URL.RequestURI()
 	)
 
-	h.logger.Error(err.Error(), "method", method, "uri", uri)
+	h.logger.Error(err.Error(), zap.String("method", method), zap.String("uri", uri))
 }

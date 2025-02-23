@@ -1,6 +1,8 @@
 package data
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 type Models struct {
 	SalesTransactions SalesTransactionModel

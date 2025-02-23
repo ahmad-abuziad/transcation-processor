@@ -2,16 +2,38 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func (app *application) routes() http.Handler {
-	gin := gin.Default()
-	gin.GET("/health", health)
-	gin.POST("/tenant/:tenantID/branch/:branchID/sales-transaction", app.newSalesTransaction)
-	gin.GET("/tenant/:tenantID/sales", app.getSalesPerProduct)
-	gin.GET("/sales", app.getTopSellingProducts)
+	r := gin.Default()
 
-	return gin
+	r.Use(app.requestDurationMiddleware())
+
+	r.GET("/health", health)
+	r.POST("/tenant/:tenantID/branch/:branchID/sales-transaction", app.newSalesTransaction)
+	r.GET("/tenant/:tenantID/sales", app.getSalesPerProduct)
+	r.GET("/sales", app.getTopSellingProducts)
+
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	return r
+}
+
+func (app *application) requestDurationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.FullPath() == "/metrics" {
+			c.Next()
+			return
+		}
+
+		start := time.Now()
+		c.Next()
+		duration := time.Since(start).Seconds()
+
+		app.metrics.RequestDuration.WithLabelValues(c.FullPath()).Observe(duration)
+	}
 }

@@ -24,6 +24,6 @@ WORKDIR /
 COPY --from=build-stage /transaction-processor-rest /transaction-processor-rest
 COPY --from=build-stage /app/migrations /migrations
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["/transaction-processor-rest"]

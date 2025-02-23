@@ -10,6 +10,7 @@ import (
 	"github.com/ahmad-abuziad/transaction-processor/internal/validator"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 func health(c *gin.Context) {
@@ -60,6 +61,7 @@ func (app *application) newSalesTransaction(c *gin.Context) {
 
 	// aggregate transaction
 	txnsChan <- *txn
+	app.metrics.TransactionsProcessed.Inc()
 
 	// response
 	c.IndentedJSON(http.StatusAccepted, gin.H{
@@ -97,7 +99,7 @@ func (app *application) getSalesPerProduct(c *gin.Context) {
 		// cache
 		err = app.cache.SalesCache.SetSalesPerProduct(tenantID, salesPerProduct)
 		if err != nil {
-			app.logger.Error("Failed to cache sales per product", "error", err.Error())
+			app.logger.Error("Failed to cache sales per product", zap.String("error", err.Error()))
 		}
 	}
 
