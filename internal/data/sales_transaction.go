@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/ahmad-abuziad/transaction-processor/internal/validator"
@@ -123,4 +124,26 @@ func (m *SalesTransactionModel) GetTopSellingProducts(limit int) ([]TopSellingPr
 	}
 
 	return tsp, nil
+}
+
+func (m *SalesTransactionModel) InsertBatch(txns []SalesTransaction) {
+	if len(txns) == 0 {
+		return
+	}
+
+	query := "INSERT INTO sales_transactions (tenant_id, branch_id, product_id, quantity_sold, price_per_unit, log_timestamp) VALUES "
+	values := []interface{}{}
+
+	for _, txn := range txns {
+		query += "(?, ?, ?, ?, ?, ?),"
+		values = append(values, txn.TenantID, txn.BranchID, txn.ProductID, txn.QuantitySold, txn.PricePerUnit, txn.Timestamp)
+	}
+
+	query = query[:len(query)-1] // Remove last comma
+
+	_, err := m.DB.Exec(query, values...)
+	if err != nil {
+		// TODO handle batch failure, retry, log failed transactions after retries
+		fmt.Printf("Failed to insert batch: %v\n", err)
+	}
 }

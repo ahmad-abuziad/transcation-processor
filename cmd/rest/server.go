@@ -38,9 +38,11 @@ func (app *application) serve() error {
 
 		app.logger.Info("completing background tasks", "addr", srv.Addr)
 
-		app.wg.Wait()
+		app.StopWorkerPool()
 		shutdownError <- nil
 	}()
+
+	app.StartWorkerPool()
 
 	app.logger.Info("starting server", "addr", srv.Addr)
 

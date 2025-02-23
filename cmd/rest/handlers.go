@@ -58,16 +58,12 @@ func (app *application) newSalesTransaction(c *gin.Context) {
 		return
 	}
 
-	// insert
-	err = app.models.SalesTransactions.Insert(txn)
-	if err != nil {
-		app.errors.serverErrorResponse(c, err)
-		return
-	}
+	// aggregate transaction
+	txnsChan <- *txn
 
 	// response
-	c.IndentedJSON(http.StatusCreated, gin.H{
-		"sales_transaction": txn,
+	c.IndentedJSON(http.StatusAccepted, gin.H{
+		"message": "Transaction received for processing",
 	})
 }
 

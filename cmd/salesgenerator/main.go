@@ -46,7 +46,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				for {
-					time.Sleep(time.Duration(rand.Intn(10)+5) * time.Second)
+					time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 					txn := salesTransaction{
 						TenantID:     int64(tenant.id),
 						BranchID:     int64(branch),
