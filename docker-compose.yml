@@ -6,6 +6,8 @@ services:
     depends_on:
       db-server:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./migrations:/migrations
     entrypoint: [ "sh", "-c", "sleep 10 && migrate -source file:///migrations -database=\"mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(db-server:3306)/transaction_processor_db?parseTime=true\" up" ]
@@ -25,6 +27,7 @@ services:
       - 80:8080
     environment:
       - DSN=${DSN:?data source name is not set}
+      - REDIS_ADDR=redis:6379
     deploy:
       restart_policy:
         condition: on-failure
@@ -49,6 +52,19 @@ services:
       interval: 10s
       retries: 5
       start_period: 10s
+  redis:
+    image: redis:7
+    container_name: redis
+    hostname: redis
+    networks:
+      - net
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      retries: 3
+      start_period: 5s
 volumes:
   db-vol:
 

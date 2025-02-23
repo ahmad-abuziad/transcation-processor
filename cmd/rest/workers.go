@@ -14,7 +14,9 @@ const (
 )
 
 var (
-	txnsChan = make(chan data.SalesTransaction, 1000)
+	txnsChan    = make(chan data.SalesTransaction, 1000)
+	refreshChan = make(chan int, 200)
+	quitChan    = make(chan struct{})
 )
 
 func (app *application) aggregateTransactions() {
@@ -36,6 +38,7 @@ func (app *application) aggregateTransactions() {
 			if len(batch) >= BatchSize {
 				app.logger.Info("batching due to batch size limit", "batch_size", len(batch))
 				app.models.SalesTransactions.InsertBatch(batch)
+				refreshChan <- len(batch)
 				batch = []data.SalesTransaction{}
 			}
 
@@ -43,21 +46,63 @@ func (app *application) aggregateTransactions() {
 			if len(batch) > 0 {
 				app.logger.Info("batching due to time limit", "batch_size", len(batch))
 				app.models.SalesTransactions.InsertBatch(batch)
+				refreshChan <- len(batch)
 				batch = []data.SalesTransaction{}
 			}
 		}
 	}
 }
 
-func (app *application) StartWorkerPool() {
+func (app *application) startWorkers() {
+	app.startAggregateTransactionsWorkers()
+	app.startRefreshTopSellingWorker()
+}
+
+func (app *application) stopWorkers() {
+	close(txnsChan)
+	close(quitChan)
+	app.wg.Wait()
+}
+
+func (app *application) startAggregateTransactionsWorkers() {
 	for i := 1; i <= NumWorkers; i++ {
 		app.worker(app.aggregateTransactions)
 	}
 }
 
-func (app *application) StopWorkerPool() {
-	close(txnsChan)
-	app.wg.Wait()
+const (
+	RefreshEveryXTransaction = 1000
+)
+
+func (app *application) startRefreshTopSellingWorker() {
+	app.worker(func() {
+		app.refreshTopSellingProducts() // first load
+		var txnsNum = 0
+		for {
+			select {
+			case txnNum := <-refreshChan:
+				txnsNum = txnsNum + txnNum
+				if txnsNum >= RefreshEveryXTransaction {
+					app.refreshTopSellingProducts()
+					txnsNum = 0
+				}
+			case <-quitChan:
+				return
+			}
+		}
+	})
+}
+
+func (app *application) refreshTopSellingProducts() {
+	topSellingProducts, err := app.models.SalesTransactions.GetTopSellingProducts(10)
+	if err != nil {
+		app.logger.Error("Failed to read top selling products cache", "error", err)
+	}
+
+	err = app.cache.SalesCache.SetTopSellingProducts(topSellingProducts)
+	if err != nil {
+		app.logger.Error("Failed to set top selling products cache", "error", err)
+	}
 }
 
 func (app *application) worker(fn func()) {

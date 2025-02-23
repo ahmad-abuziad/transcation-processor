@@ -23,7 +23,7 @@ func (app *application) serve() error {
 
 	go func() {
 		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, syscall.SIGINT)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		s := <-quit
 
 		app.logger.Info("caught signal", "signal", s.String())
@@ -38,11 +38,11 @@ func (app *application) serve() error {
 
 		app.logger.Info("completing background tasks", "addr", srv.Addr)
 
-		app.StopWorkerPool()
+		app.stopWorkers()
 		shutdownError <- nil
 	}()
 
-	app.StartWorkerPool()
+	app.startWorkers()
 
 	app.logger.Info("starting server", "addr", srv.Addr)
 

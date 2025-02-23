@@ -84,15 +84,24 @@ func (app *application) getSalesPerProduct(c *gin.Context) {
 		return
 	}
 
-	// query
-	salesPerProduct, err := app.models.SalesTransactions.GetSalesPerProduct(tenantID)
+	// read from cache
+	salesPerProduct, err := app.cache.SalesCache.GetSalesPerProduct(tenantID)
 	if err != nil {
-		app.errors.serverErrorResponse(c, err)
-		return
+		// query from DB
+		salesPerProduct, err = app.models.SalesTransactions.GetSalesPerProduct(tenantID)
+		if err != nil {
+			app.errors.serverErrorResponse(c, err)
+			return
+		}
+
+		// cache
+		err = app.cache.SalesCache.SetSalesPerProduct(tenantID, salesPerProduct)
+		if err != nil {
+			app.logger.Error("Failed to cache sales per product", "error", err.Error())
+		}
 	}
 
-	// response
-	c.IndentedJSON(http.StatusCreated, gin.H{
+	c.IndentedJSON(http.StatusOK, gin.H{
 		"sales_per_product": salesPerProduct,
 	})
 }
@@ -116,15 +125,11 @@ func (app *application) getTopSellingProducts(c *gin.Context) {
 		return
 	}
 
-	// query
-	salesPerProduct, err := app.models.SalesTransactions.GetTopSellingProducts(limit)
-	if err != nil {
-		app.errors.serverErrorResponse(c, err)
-		return
-	}
+	// read from cache
+	topSellingProducts, err := app.cache.SalesCache.GetTopSellingProducts()
 
 	// response
-	c.IndentedJSON(http.StatusCreated, gin.H{
-		"sales_per_product": salesPerProduct,
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"top_selling_products": topSellingProducts,
 	})
 }
