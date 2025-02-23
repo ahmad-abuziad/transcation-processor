@@ -44,10 +44,10 @@ docker build -f Dockerfile -t transaction-processor-test --progress plain --no-c
 find todos
 encapsulate workers
 
-sales limit 10?
+sales limit 10? top-selling
 encapsulate logger
 encapsulate handlers
-flags to read DSN & REDIS ADDR
+flags to read DSN & REDIS ADDR instead of environment variables
 flags to read configs
 using root
 

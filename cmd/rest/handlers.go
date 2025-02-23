@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -109,26 +108,12 @@ func (app *application) getSalesPerProduct(c *gin.Context) {
 }
 
 func (app *application) getTopSellingProducts(c *gin.Context) {
-	// parse
-	l := c.Query("limit")
-	limit, err := strconv.Atoi(l)
-	if err != nil {
-		app.errors.badRequestResponse(c, fmt.Errorf("unable to parse %v", l))
-		return
-	}
-
-	// validate
-	v := validator.New()
-	v.Check(limit >= 1, "limit", "limit must be at least 1")
-	v.Check(limit <= 100, "limit", "limit must be at most 100")
-
-	if !v.Valid() {
-		app.errors.failedValidationResponse(c, v.Errors)
-		return
-	}
-
 	// read from cache
 	topSellingProducts, err := app.cache.SalesCache.GetTopSellingProducts()
+	if err != nil {
+		app.errors.serverErrorResponse(c, err)
+		return
+	}
 
 	// response
 	c.IndentedJSON(http.StatusOK, gin.H{

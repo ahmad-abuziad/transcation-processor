@@ -22,4 +22,4 @@ go.work
 go.work.sum
 
 # env file
-.env
+# .env # commented to reduce the steps needed to run the app (it is fine in our case but it's not recommended)

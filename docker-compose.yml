@@ -31,6 +31,11 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"] 
+      interval: 10s
+      retries: 5
+      start_period: 10s
   db-server:
     image: mysql:8
     container_name: db-server
@@ -77,7 +82,22 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-
+  salesgen-server:
+    depends_on:
+      rest-server:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: Dockerfile.salesgenerator
+    container_name: salesgen-server
+    hostname: salesgen-server
+    networks:
+      - net
+    environment:
+      - REST_SERVER_URL=http://rest-server:8080
+    deploy:
+      restart_policy:
+        condition: on-failure
 volumes:
   db-vol:
 

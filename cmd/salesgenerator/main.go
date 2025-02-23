@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -79,7 +80,7 @@ func request(txn salesTransaction) {
 		fmt.Println("Error marshaling JSON:", err)
 		return
 	}
-	url := fmt.Sprintf("http://localhost/tenant/%v/branch/%v/sales-transaction", txn.TenantID, txn.BranchID)
+	url := fmt.Sprintf("%v/tenant/%v/branch/%v/sales-transaction", os.Getenv("REST_SERVER_URL"), txn.TenantID, txn.BranchID)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println(err.Error())
