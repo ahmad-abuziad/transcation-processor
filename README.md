@@ -1,70 +1,56 @@
 # transcation-processor
 Multi-Tenant POS Transaction Processor
 
+# Instructions
 
-volume create
- docker volume create db-vol
+## Run
+ - Install docker
+ - Run docker
+ - Go the project directory
+ - type "docker compose up --build"
+(it will take around 5-10 minutes downloading, building, running images)
 
-network create
- docker network create -d bridge net
- 
-container run
- docker run --detach --name db-server --hostname db --network net -p 3306:3306 -p 8080:8080 -e MYSQL_ROOT_PASSWORD=pass -v db-vol:/var/lib/mysql mysql:8
+## Shutdown
+ - type "docker compose down"
+ - if you want to erase the data(volume) type "docker compose down -v"
 
-container enter
- docker exec -it db-server mysql -u root -p
- password
+## API
 
-    database setup
-    CREATE DATABASE transaction_processor_db;
-    CREATE USER 'dbuser'@'%' IDENTIFIED BY 'pass';
-    GRANT ALL PRIVILEGES ON transaction_processor_db.* TO 'dbuser'@'%';
-    FLUSH PRIVILEGES;
+# System architecture
 
-image build
- docker build --tag transaction-processor-rest .
+# Project structure
 
-container run
- docker run -it --detach --network net --name rest-server --publish 80:8080 --env DSN="root:pass@(db:3306)/transaction_processor_db?parseTime=true" transaction-processor-rest
+# Database modeling
 
- ctrl+c or cmd+c
+# Optimizations
 
+# Concurrency techniques used
 
- docker rm
- docker stop
- docker restart
+# Trade-offs made between caching, transaction processing, and API design
 
- # app app-db-net db
+# Todos
+ - Refactor
+    - encapsulate workers
+    - encapsulate logger
+    - add flags for configs
+    - replace environment variables with flags
+    - Move /metrics to a different/separate port e.g. 8081 (internal usage)
+ - Send email
+ - Loom demo
 
-test - 1gb
-docker build -f Dockerfile -t transaction-processor-test --progress plain --no-cache --target run-test-stage .
+# Q&A
 
-
-
-find todos
-encapsulate workers
-
-sales limit 10? top-selling
-encapsulate logger
-encapsulate handlers
-flags to read DSN & REDIS ADDR instead of environment variables
-flags to read configs
-using root
-
-Q&A
-is it safe to commit the .env file?
+Is it safe to commit the .env file?
 no, this is to make the running steps easier. in production you shouldn't commit .env files.
 
-- retry
-- document
-- run
 
-next
-- kafka
-- grpc
-- tests
-- rate limit
-- authentication
-- authorization
-- physical isolation
-- logical isolation
+# Next
+- Kafka/RabbitMQ
+- gRPC
+- Kubernetes
+- Load Testing
+- Unit & Integration Testing
+- Rate Limit
+- Authentication & Authorization
+- Physical & Logical Isolation
+- Frontend (React, Hotwire)

@@ -15,9 +15,9 @@ func (app *application) routes() http.Handler {
 
 	r.GET("/health", health)
 
-	r.POST("/tenant/:tenantID/branch/:branchID/sales-transaction", app.newSalesTransaction)
-	r.GET("/tenant/:tenantID/sales", app.getSalesPerProduct)
-	r.GET("/top-selling", app.getTopSellingProducts)
+	r.POST("/v1/tenants/:tenantID/branches/:branchID/sales-transactions", app.newSalesTransaction)
+	r.GET("/v1/tenants/:tenantID/sales", app.getSalesPerProduct)
+	r.GET("/v1/top-selling", app.getTopSellingProducts)
 
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
