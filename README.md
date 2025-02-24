@@ -137,10 +137,95 @@ erDiagram
 ---
 
 # Optimizations
+- Batching database writes
+- Use Zap for logging (faster than the standard logger)
+- Caching total sales per product (for a given tenant)
+- Caching top selling products (across all tenants)
 
 # Concurrency techniques used
+```mermaid
+graph TD;
+    A[Incoming Sales Transactions] -->|Buffered| B(txnsChan);
+    B -->|Batching| C{Batching Conditions};
+    C -->|Batch Size Reached| D[Insert Batch into DB];
+    C -->|Time Limit Reached| D;
+    D -->|Success| E[Refresh Cache if Threshold Reached];
+    E -->|If X Transactions Processed| F[Refresh Top Selling Products];
+    D -->|Failure| G[Retry Insert with Backoff];
+```
 
-# Trade-offs made between caching, transaction processing, and API design
+---
+
+### **Key Techniques Used:**
+1. **Worker Pool Pattern**:  
+   - Uses **5 concurrent workers** (`NumWorkers = 5`) to process transactions.
+   - Workers run `aggregateTransactions()`.
+
+2. **Buffered Channels** (`txnsChan`, `refreshChan`, `quitChan`):  
+   - Used to handle transaction data flow efficiently.
+
+3. **Batching Mechanism**:  
+   - Batches transactions **every 100 items** (`BatchSize`) or **every 5 seconds** (`BatchTime`).
+
+4. **Retries with Fixed Backoff**:  
+   - `batchInsertWithRetry()` retries **3 times** with a **10-second delay**.
+
+5. **Graceful Shutdown**:  
+   - `stopWorkers()` closes channels and waits for workers to exit.
+
+---
+
+# Trade-offs made between caching, transaction processing, Database modeling, and API design
+
+## Caching
+- Total sales per product
+  - expires after X minutes, X = 1
+  - refreshed on request
+  - advantage: reduce load on database
+  - disadvantage: user may read old data (not real time)
+
+- Top selling products
+  - expiration 10 minutes
+  - auto refreshed every X processed transactions, X = 1000
+  - X should adapt to system traffic because it maybe called more than needed or may never get called
+
+## Transaction Processing
+
+- transactions currently is being processed by X workers, regardless where the transactions coming from(tenant, branch), workers are sharing same channel.
+  - Advantage: keeping workers busy(optimizing resources)
+  - Disadvantage: specific tenant or branch may take more resources than allowed
+
+- Alternative: assign each branch it's own channel and set of workers
+  - Advantage: control over resources per tenant/branch
+  - Disadvantage: complexity, some branches may reserve workers but not use them
+
+## Database Modeling
+
+### Data Isolation
+- Row-level security
+  - Advantage: Simple queries
+  - Advantage: Fast
+  - Advantage: easy to apply migrations and schema updates
+  - Disadvantage: relies on logical isolation, any bug in code could leak data e.g. in SQL forgetting to use "Where tenantID = ?"
+  - Disadvantage: identifiers is shared across tenants e.g. tenant 1 has branch id 1 and 2, and tenant 2 has branch id 3 and 4 (can work around with string identifiers or creating a separate column)
+
+- Alternative: schema/namespace level
+  - Advantage: higher pyshical isolation
+  - Advantage: Simpler for sharding or partitioning
+  - Disadvantage: Schema updates need to reflect across all tenants tables
+
+## API Design
+
+### Advantages
+- Levels e.g. tenants/?/branches/?/operation helps with isolation
+- Versioning
+
+### Disadvantages
+- Some endpoints need to be more dynamic/generic/reusable e.g. /top-selling can have ?limit=1,10 (will give more flexibility but needs cache handling)
+- Internal endpoints to be on a different port e.g. move prometheus /metrics to 8081
+
+### Alternatives to REST API
+REST API is not the best for our use case since the write endpoint is not waiting for a response we can go with event driven architecture and use message queues e.g. Kafka or RabbitMQ, Or we can go with gRPC if it's an internal service for performance.
 
 # Todos
  - Refactor
@@ -150,14 +235,6 @@ erDiagram
     - replace environment variables with flags
     - Move /metrics to a different/separate port e.g. 8081 (internal usage)
     - Move infra files to infra folder
- - Send email
- - Loom demo
-
-# Q&A
-
-Is it safe to commit the .env file?
-no, this is to make the running steps easier. in production you shouldn't commit .env files.
-
 
 # Next
 - Kafka/RabbitMQ
