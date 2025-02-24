@@ -2,7 +2,7 @@
 Multi-Tenant POS Transaction Processor
 
 # Instructions
-
+[Loom Quick Intro](https://www.loom.com/share/03d0624ef85644e0ad8d8275baed06ec?sid=3416c736-a17c-4068-9c61-f427ab106c35)
 ## Run
  - Install docker
  - Run docker
@@ -82,7 +82,7 @@ graph TD;
   - 📂 validator # Request validation logic  
 - 📂 migrations # Database migration files  
 
-See https://go.dev/doc/modules/layout#server-project
+See [Organizing a Go module - server project](https://go.dev/doc/modules/layout#server-project)
 
 # Database modeling
 
